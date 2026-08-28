@@ -37,12 +37,13 @@ export class TotpService extends BaseService {
 
     // Create or update the TOTP record (disabled by default)
     if (existingTotp) {
-      // Update existing disabled TOTP
-      await this.totpRepository.totpRepository.update({ userId }, { secret });
-    } else {
-      // Create new TOTP
-      await this.totpRepository.createTotp(userId, secret);
+      // Update existing disabled TOTP - we need to update via database
+      // For now, delete and recreate
+      await this.totpRepository.deleteTotp(userId);
     }
+
+    // Create new TOTP
+    await this.totpRepository.createTotp(userId, secret);
 
     // Generate QR code
     const otpauth_url = authenticator.keyuri(userEmail, 'Immich', secret);
@@ -155,3 +156,4 @@ export class TotpService extends BaseService {
     }
   }
 }
+

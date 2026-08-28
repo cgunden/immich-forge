@@ -1,72 +1,97 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Insertable, Kysely, Updateable } from 'kysely';
+import { InjectKysely } from 'nestjs-kysely';
+import { DB } from 'src/schema';
 import { TotpTable } from 'src/schema/tables/totp.table';
 import { TotpDeviceTable } from 'src/schema/tables/totp-device.table';
-import { BaseRepository } from 'src/repositories/base.repository';
+import { asUuid } from 'src/utils/database';
 
 @Injectable()
-export class TotpRepository extends BaseRepository {
-  constructor(
-    @InjectRepository(TotpTable) private totpRepository: Repository<TotpTable>,
-    @InjectRepository(TotpDeviceTable) private totpDeviceRepository: Repository<TotpDeviceTable>,
-  ) {
-    super();
-  }
+export class TotpRepository {
+  constructor(@InjectKysely() private db: Kysely<DB>) {}
 
   async getTotpByUserId(userId: string): Promise<TotpTable | null> {
-    return this.totpRepository.findOne({ where: { userId } });
+    return this.db
+      .selectFrom('totp')
+      .selectAll()
+      .where('userId', '=', asUuid(userId))
+      .executeTakeFirst();
   }
 
   async createTotp(userId: string, secret: string): Promise<TotpTable> {
-    return this.totpRepository.save({
-      userId,
-      secret,
-      enabled: false,
-    });
+    return this.db
+      .insertInto('totp')
+      .values({
+        userId: asUuid(userId),
+        secret,
+        enabled: false,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
   }
 
   async enableTotp(userId: string): Promise<TotpTable> {
-    await this.totpRepository.update({ userId }, { enabled: true });
-    const totp = await this.getTotpByUserId(userId);
-    if (!totp) {
-      throw new Error('TOTP not found');
-    }
-    return totp;
+    return this.db
+      .updateTable('totp')
+      .set({ enabled: true })
+      .where('userId', '=', asUuid(userId))
+      .returningAll()
+      .executeTakeFirstOrThrow();
   }
 
   async disableTotp(userId: string): Promise<void> {
-    await this.totpRepository.update({ userId }, { enabled: false });
+    await this.db
+      .updateTable('totp')
+      .set({ enabled: false })
+      .where('userId', '=', asUuid(userId))
+      .execute();
   }
 
   async deleteTotp(userId: string): Promise<void> {
-    await this.totpRepository.delete({ userId });
+    await this.db
+      .deleteFrom('totp')
+      .where('userId', '=', asUuid(userId))
+      .execute();
   }
 
   async getTotpDeviceBySessionId(sessionId: string): Promise<TotpDeviceTable | null> {
-    return this.totpDeviceRepository.findOne({ where: { sessionId } });
+    return this.db
+      .selectFrom('totp_device')
+      .selectAll()
+      .where('sessionId', '=', asUuid(sessionId))
+      .executeTakeFirst();
   }
 
   async createTotpDevice(sessionId: string, deviceFingerprint: string): Promise<TotpDeviceTable> {
-    return this.totpDeviceRepository.save({
-      sessionId,
-      deviceFingerprint,
-      totpVerified: false,
-    });
+    return this.db
+      .insertInto('totp_device')
+      .values({
+        sessionId: asUuid(sessionId),
+        deviceFingerprint,
+        totpVerified: false,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
   }
 
   async markTotpDeviceVerified(sessionId: string): Promise<void> {
-    await this.totpDeviceRepository.update({ sessionId }, { totpVerified: true });
+    await this.db
+      .updateTable('totp_device')
+      .set({ totpVerified: true })
+      .where('sessionId', '=', asUuid(sessionId))
+      .execute();
   }
 
   async getTotpDeviceByFingerprint(userId: string, deviceFingerprint: string): Promise<TotpDeviceTable | null> {
-    return this.totpDeviceRepository
-      .createQueryBuilder('td')
-      .innerJoin('session', 's', 's.id = td.sessionId')
-      .where('s.userId = :userId', { userId })
-      .andWhere('td.deviceFingerprint = :deviceFingerprint', { deviceFingerprint })
-      .andWhere('td.totpVerified = true')
-      .orderBy('td.createdAt', 'DESC')
-      .getOne();
+    return this.db
+      .selectFrom('totp_device')
+      .innerJoin('session', (join) => join.onRef('session.id', '=', 'totp_device.sessionId'))
+      .selectAll('totp_device')
+      .where('session.userId', '=', asUuid(userId))
+      .where('totp_device.deviceFingerprint', '=', deviceFingerprint)
+      .where('totp_device.totpVerified', '=', true)
+      .orderBy('totp_device.createdAt', 'desc')
+      .executeTakeFirst();
   }
 }
+
