@@ -21,6 +21,9 @@
   let errorMessage: string = $state('');
   let email = $state('');
   let password = $state('');
+  let totpCode = $state('');
+  let totpRequired = $state(false);
+  let trustDevice = $state(false);
   let oauthError = $state('');
   let loading = $state(false);
   let oauthLoading = $state(true);
@@ -82,6 +85,13 @@
       errorMessage = '';
       loading = true;
       const user = await login({ loginCredentialDto: { email, password } });
+
+      // Check if TOTP is required
+      if (user.totpRequired && !totpCode) {
+        totpRequired = true;
+        loading = false;
+        return;
+      }
 
       if (user.isAdmin && !serverConfig.isOnboarded) {
         await onOnboarding();
@@ -148,6 +158,25 @@
         <Field label={$t('password')} required="indicator">
           <PasswordInput id="password" bind:value={password} autocomplete="current-password" />
         </Field>
+
+        {#if totpRequired}
+          <Field label={$t('verification_code')} required="indicator">
+            <Input
+              id="totpCode"
+              name="totpCode"
+              type="text"
+              bind:value={totpCode}
+              placeholder="000000"
+              maxlength={6}
+              pattern="[0-9]{6}"
+            />
+          </Field>
+
+          <label class="flex items-center gap-2">
+            <input type="checkbox" bind:checked={trustDevice} />
+            <span class="text-sm">{$t('trust_this_device')}</span>
+          </label>
+        {/if}
 
         <Button type="submit" size="large" shape="round" fullWidth {loading} class="mt-6">{$t('to_login')}</Button>
       </form>
