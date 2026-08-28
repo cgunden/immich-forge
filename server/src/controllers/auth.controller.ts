@@ -14,6 +14,11 @@ import {
   PinCodeSetupDto,
   SessionUnlockDto,
   SignUpDto,
+  TotpDisableDto,
+  TotpEnableDto,
+  TotpSetupDto,
+  TotpSetupResponseDto,
+  TotpVerifyDto,
   ValidateAccessTokenResponseDto,
 } from 'src/dtos/auth.dto';
 import { UserAdminResponseDto } from 'src/dtos/user.dto';
@@ -178,5 +183,52 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async lockAuthSession(@Auth() auth: AuthDto): Promise<void> {
     return this.service.lockSession(auth);
+  }
+
+  @Post('totp/setup')
+  @Authenticated({ permission: Permission.TotpCreate })
+  @Endpoint({
+    summary: 'Setup TOTP 2FA',
+    description: 'Generate a TOTP secret and QR code for setting up two-factor authentication.',
+    history: new HistoryBuilder().added('v1').beta('v1').stable('v2'),
+  })
+  setupTotp(@Auth() auth: AuthDto, @Body() dto: TotpSetupDto): Promise<TotpSetupResponseDto> {
+    return this.service.setupTotp(auth, dto);
+  }
+
+  @Post('totp/enable')
+  @Authenticated({ permission: Permission.TotpCreate })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Endpoint({
+    summary: 'Enable TOTP 2FA',
+    description: 'Enable two-factor authentication by verifying the TOTP code.',
+    history: new HistoryBuilder().added('v1').beta('v1').stable('v2'),
+  })
+  enableTotp(@Auth() auth: AuthDto, @Body() dto: TotpEnableDto): Promise<void> {
+    return this.service.enableTotp(auth, dto);
+  }
+
+  @Delete('totp')
+  @Authenticated({ permission: Permission.TotpDelete })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Endpoint({
+    summary: 'Disable TOTP 2FA',
+    description: 'Disable two-factor authentication by providing the account password.',
+    history: new HistoryBuilder().added('v1').beta('v1').stable('v2'),
+  })
+  disableTotp(@Auth() auth: AuthDto, @Body() dto: TotpDisableDto): Promise<void> {
+    return this.service.disableTotp(auth, dto);
+  }
+
+  @Post('totp/verify')
+  @Authenticated()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Endpoint({
+    summary: 'Verify TOTP code',
+    description: 'Verify a TOTP code during login to complete two-factor authentication.',
+    history: new HistoryBuilder().added('v1').beta('v1').stable('v2'),
+  })
+  verifyTotp(@Auth() auth: AuthDto, @Body() dto: TotpVerifyDto): Promise<void> {
+    return this.service.verifyTotp(auth, dto);
   }
 }

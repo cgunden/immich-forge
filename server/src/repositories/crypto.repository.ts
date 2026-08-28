@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { compareSync, hash } from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { createHash, createPublicKey, createVerify, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, createHmac, createPublicKey, createVerify, randomBytes, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 
 @Injectable()
@@ -65,5 +65,61 @@ export class CryptoRepository {
 
   verifyJwt<T = any>(token: string, secret: string): T {
     return jwt.verify(token, secret, { algorithms: ['HS256'] }) as T;
+  }
+
+  generateTotpSecret(): string {
+    // Generate a 20-byte (160-bit) secret for TOTP
+    return randomBytes(20).toString('base64');
+  }
+
+  verifyTotp(secret: string, token: string, window = 1): boolean {
+    // Decode base64 secret
+    const secretBuffer = Buffer.from(secret, 'base64');
+    
+    // Get current time step (30 second intervals)
+    const timeStep = Math.floor(Date.now() / 1000 / 30);
+    
+    // Check token against current time and window
+    for (let i = -window; i <= window; i++) {
+      const counter = timeStep + i;
+      const expectedToken = this.generateTotpToken(secretBuffer, counter);
+      if (expectedToken === token) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  private generateTotpToken(secret: Buffer, counter: number): string {
+    // Convert counter to 8-byte buffer (big-endian)
+    const counterBuffer = Buffer.alloc(8);
+    counterBuffer.writeBigUInt64BE(BigInt(counter));
+    
+    // Generate HMAC-SHA1
+    const hmac = createHmac('sha1', secret);
+    hmac.update(counterBuffer);
+    const hash = hmac.digest();
+    
+    // Dynamic truncation
+    const offset = hash[hash.length - 1] & 0x0f;
+    const binary =
+      ((hash[offset] & 0x7f) << 24) |
+      ((hash[offset + 1] & 0xff) << 16) |
+      ((hash[offset + 2] & 0xff) << 8) |
+      (hash[offset + 3] & 0xff);
+    
+    // Generate 6-digit code
+    const otp = binary % 1000000;
+    return otp.toString().padStart(6, '0');
+  }
+
+  generateTotpUri(secret: string, email: string, issuer = 'Immich'): string {
+    const encodedSecret = Buffer.from(secret, 'base64')
+      .toString('base32')
+      .replace(/=/g, '');
+    const encodedIssuer = encodeURIComponent(issuer);
+    const encodedEmail = encodeURIComponent(email);
+    return `otpauth://totp/${encodedIssuer}:${encodedEmail}?secret=${encodedSecret}&issuer=${encodedIssuer}`;
   }
 }

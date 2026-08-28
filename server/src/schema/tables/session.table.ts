@@ -58,4 +58,7 @@ export class SessionTable {
 
   @Column({ nullable: true })
   oauthBearerToken!: string | null;
+
+  @Column({ type: 'boolean', default: false })
+  isTrustedDevice!: Generated<boolean>;
 }

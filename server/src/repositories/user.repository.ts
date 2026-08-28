@@ -102,7 +102,7 @@ export class UserRepository {
   getForPinCode(id: string) {
     return this.db
       .selectFrom('user')
-      .select(['user.pinCode', 'user.password'])
+      .select(['user.pinCode', 'user.password', 'user.totpSecret'])
       .where('user.id', '=', id)
       .where('user.deletedAt', 'is', null)
       .executeTakeFirstOrThrow();
