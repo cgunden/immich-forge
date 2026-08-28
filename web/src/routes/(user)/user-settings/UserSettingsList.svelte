@@ -4,6 +4,7 @@
   import DownloadSettings from './DownloadSettings.svelte';
   import FeatureSettings from './FeatureSettings.svelte';
   import NotificationsSettings from './NotificationsSettings.svelte';
+  import TotpSettings from './TotpSettings.svelte';
   import UserPurchaseSettings from './UserPurchaseSettings.svelte';
   import UserUsageStatistic from './UserUsageStatistic.svelte';
   import { OpenQueryParam, QueryParameter } from '$lib/constants';
@@ -127,6 +128,15 @@
   subtitle={$t('change_your_password')}
 >
   <ChangePasswordSettings />
+</SettingAccordion>
+
+<SettingAccordion
+  icon={mdiTwoFactorAuthentication}
+  key="totp-settings"
+  title={$t('two_factor_authentication')}
+  subtitle={$t('manage_two_factor_authentication')}
+>
+  <TotpSettings />
 </SettingAccordion>
 
 <SettingAccordion

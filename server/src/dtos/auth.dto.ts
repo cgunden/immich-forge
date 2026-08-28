@@ -135,10 +135,50 @@ const AuthStatusResponseSchema = z
     isElevated: z.boolean().describe('Is elevated session'),
     expiresAt: z.string().optional().describe('Session expiration date'),
     pinExpiresAt: z.string().optional().describe('PIN expiration date'),
+    totpEnabled: z.boolean().describe('Has TOTP 2FA enabled'),
   })
   .meta({ id: 'AuthStatusResponseDto' });
 
+const TotpSetupSchema = z
+  .object({
+    password: z.string().describe('User password').meta({ example: 'password' }),
+  })
+  .meta({ id: 'TotpSetupDto' });
+
+const TotpSetupResponseSchema = z
+  .object({
+    secret: z.string().describe('TOTP secret'),
+    qrCode: z.string().describe('QR code data URL'),
+  })
+  .meta({ id: 'TotpSetupResponseDto' });
+
+const TotpEnableSchema = z
+  .object({
+    secret: z.string().describe('TOTP secret from setup'),
+    code: z.string().regex(/^\d{6}$/).describe('6-digit TOTP code').meta({ example: '123456' }),
+  })
+  .meta({ id: 'TotpEnableDto' });
+
+const TotpDisableSchema = z
+  .object({
+    password: z.string().describe('User password').meta({ example: 'password' }),
+  })
+  .meta({ id: 'TotpDisableDto' });
+
+const TotpVerifySchema = z
+  .object({
+    code: z.string().regex(/^\d{6}$/).describe('6-digit TOTP code').meta({ example: '123456' }),
+    trustDevice: z.boolean().default(false).describe('Trust this device (skip 2FA for 90 days)'),
+  })
+  .meta({ id: 'TotpVerifyDto' });
+
+const LoginWithTotpSchema = LoginCredentialSchema.extend({
+  code: z.string().regex(/^\d{6}$/).optional().describe('6-digit TOTP code if 2FA is enabled').meta({ example: '123456' }),
+  trustDevice: z.boolean().default(false).optional().describe('Trust this device (skip 2FA for 90 days)'),
+}).meta({ id: 'LoginWithTotpDto' });
+
 export class LoginCredentialDto extends createZodDto(LoginCredentialSchema) {}
+export class LoginWithTotpDto extends createZodDto(LoginWithTotpSchema) {}
 export class LoginResponseDto extends createZodDto(LoginResponseSchema) {}
 export class LogoutResponseDto extends createZodDto(LogoutResponseSchema) {}
 export class SignUpDto extends createZodDto(SignUpSchema) {}
@@ -153,3 +193,8 @@ export class OAuthConfigDto extends createZodDto(OAuthConfigSchema) {}
 export class OAuthAuthorizeResponseDto extends createZodDto(OAuthAuthorizeResponseSchema) {}
 export class OAuthBackchannelLogoutDto extends createZodDto(OAuthBackchannelLogoutSchema) {}
 export class AuthStatusResponseDto extends createZodDto(AuthStatusResponseSchema) {}
+export class TotpSetupDto extends createZodDto(TotpSetupSchema) {}
+export class TotpSetupResponseDto extends createZodDto(TotpSetupResponseSchema) {}
+export class TotpEnableDto extends createZodDto(TotpEnableSchema) {}
+export class TotpDisableDto extends createZodDto(TotpDisableSchema) {}
+export class TotpVerifyDto extends createZodDto(TotpVerifySchema) {}

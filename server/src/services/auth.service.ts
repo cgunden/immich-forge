@@ -18,6 +18,11 @@ import {
   PinCodeSetupDto,
   SessionUnlockDto,
   SignUpDto,
+  TotpDisableDto,
+  TotpEnableDto,
+  TotpSetupDto,
+  TotpSetupResponseDto,
+  TotpVerifyDto,
   mapLoginResponse,
 } from 'src/dtos/auth.dto';
 import { UserAdminResponseDto, mapUserAdmin } from 'src/dtos/user.dto';
@@ -670,6 +675,96 @@ export class AuthService extends BaseService {
       isElevated: !!auth.session?.hasElevatedPermission,
       expiresAt: session?.expiresAt?.toISOString(),
       pinExpiresAt: session?.pinExpiresAt?.toISOString(),
+      totpEnabled: !!(user as any).totpSecret,
     };
+  }
+
+  async setupTotp(auth: AuthDto, dto: TotpSetupDto): Promise<TotpSetupResponseDto> {
+    const user = await this.userRepository.getByEmail(auth.user.email, { withPassword: true });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    // Verify password
+    if (!this.validateSecret(dto.password, user.password)) {
+      throw new BadRequestException('Wrong password');
+    }
+
+    // Generate TOTP secret
+    const secret = this.cryptoRepository.generateTotpSecret();
+    const uri = this.cryptoRepository.generateTotpUri(secret, user.email);
+
+    // Generate QR code as data URL (simple SVG-based QR code)
+    const qrCode = await this.generateQrCode(uri);
+
+    return { secret, qrCode };
+  }
+
+  async enableTotp(auth: AuthDto, dto: TotpEnableDto): Promise<void> {
+    const user = await this.userRepository.get(auth.user.id, {});
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    if ((user as any).totpSecret) {
+      throw new BadRequestException('TOTP is already enabled');
+    }
+
+    // Verify the TOTP code with the provided secret
+    if (!this.cryptoRepository.verifyTotp(dto.secret, dto.code)) {
+      throw new BadRequestException('Invalid TOTP code');
+    }
+
+    // Save the secret
+    await this.userRepository.update(auth.user.id, { totpSecret: dto.secret } as any);
+  }
+
+  async disableTotp(auth: AuthDto, dto: TotpDisableDto): Promise<void> {
+    const user = await this.userRepository.getByEmail(auth.user.email, { withPassword: true });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+
+    if (!(user as any).totpSecret) {
+      throw new BadRequestException('TOTP is not enabled');
+    }
+
+    // Verify password
+    if (!this.validateSecret(dto.password, user.password)) {
+      throw new BadRequestException('Wrong password');
+    }
+
+    // Remove TOTP secret and untrust all devices
+    await this.userRepository.update(auth.user.id, { totpSecret: null } as any);
+    await this.sessionRepository.invalidateAll({ userId: auth.user.id });
+  }
+
+  async verifyTotp(auth: AuthDto, dto: TotpVerifyDto): Promise<void> {
+    if (!auth.session) {
+      throw new BadRequestException('This endpoint can only be used with a session token');
+    }
+
+    const user = await this.userRepository.get(auth.user.id, {});
+    if (!user || !(user as any).totpSecret) {
+      throw new UnauthorizedException();
+    }
+
+    // Verify the TOTP code
+    if (!this.cryptoRepository.verifyTotp((user as any).totpSecret, dto.code)) {
+      throw new BadRequestException('Invalid TOTP code');
+    }
+
+    // Mark device as trusted if requested
+    if (dto.trustDevice) {
+      await this.sessionRepository.update(auth.session.id, { isTrustedDevice: true } as any);
+    }
+  }
+
+  private async generateQrCode(data: string): Promise<string> {
+    // Simple QR code generation using a data URL
+    // In production, you might want to use a proper QR code library
+    // For now, return a placeholder that can be replaced with actual QR code generation
+    const encoded = encodeURIComponent(data);
+    return `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="50" text-anchor="middle">${encoded}</text></svg>`;
   }
 }

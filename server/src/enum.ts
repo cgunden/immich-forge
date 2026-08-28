@@ -236,6 +236,9 @@ export enum Permission {
   PinCodeUpdate = 'pinCode.update',
   PinCodeDelete = 'pinCode.delete',
 
+  TotpCreate = 'totp.create',
+  TotpDelete = 'totp.delete',
+
   PluginCreate = 'plugin.create',
   PluginRead = 'plugin.read',
   PluginUpdate = 'plugin.update',
