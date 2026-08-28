@@ -135,8 +135,29 @@ const AuthStatusResponseSchema = z
     isElevated: z.boolean().describe('Is elevated session'),
     expiresAt: z.string().optional().describe('Session expiration date'),
     pinExpiresAt: z.string().optional().describe('PIN expiration date'),
+    totp: z.boolean().optional().describe('Has TOTP enabled'),
   })
   .meta({ id: 'AuthStatusResponseDto' });
+
+const TotpSetupSchema = z
+  .object({
+    secret: z.string().describe('TOTP secret'),
+    qrCode: z.string().describe('QR code as data URL'),
+  })
+  .meta({ id: 'TotpSetupResponseDto' });
+
+const TotpVerifySchema = z
+  .object({
+    code: z.string().regex(/^\d{6}$/).describe('6-digit TOTP code').meta({ example: '123456' }),
+    deviceFingerprint: z.string().describe('Device fingerprint for tracking').meta({ example: 'device-id' }),
+  })
+  .meta({ id: 'TotpVerifyDto' });
+
+const TotpStatusSchema = z
+  .object({
+    enabled: z.boolean().describe('Is TOTP enabled'),
+  })
+  .meta({ id: 'TotpStatusResponseDto' });
 
 export class LoginCredentialDto extends createZodDto(LoginCredentialSchema) {}
 export class LoginResponseDto extends createZodDto(LoginResponseSchema) {}
@@ -153,3 +174,6 @@ export class OAuthConfigDto extends createZodDto(OAuthConfigSchema) {}
 export class OAuthAuthorizeResponseDto extends createZodDto(OAuthAuthorizeResponseSchema) {}
 export class OAuthBackchannelLogoutDto extends createZodDto(OAuthBackchannelLogoutSchema) {}
 export class AuthStatusResponseDto extends createZodDto(AuthStatusResponseSchema) {}
+export class TotpSetupResponseDto extends createZodDto(TotpSetupSchema) {}
+export class TotpVerifyDto extends createZodDto(TotpVerifySchema) {}
+export class TotpStatusResponseDto extends createZodDto(TotpStatusSchema) {}

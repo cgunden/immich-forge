@@ -14,18 +14,25 @@ import {
   PinCodeSetupDto,
   SessionUnlockDto,
   SignUpDto,
+  TotpSetupResponseDto,
+  TotpStatusResponseDto,
+  TotpVerifyDto,
   ValidateAccessTokenResponseDto,
 } from 'src/dtos/auth.dto';
 import { UserAdminResponseDto } from 'src/dtos/user.dto';
 import { ApiTag, AuthType, ImmichCookie, Permission } from 'src/enum';
 import { Auth, Authenticated, GetLoginDetails } from 'src/middleware/auth.guard';
 import { AuthService, LoginDetails } from 'src/services/auth.service';
+import { TotpService } from 'src/services/totp.service';
 import { respondWithCookie, respondWithoutCookie } from 'src/utils/response';
 
 @ApiTags(ApiTag.Authentication)
 @Controller('auth')
 export class AuthController {
-  constructor(private service: AuthService) {}
+  constructor(
+    private service: AuthService,
+    private totpService: TotpService,
+  ) {}
 
   @Post('login')
   @Endpoint({
@@ -178,5 +185,56 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async lockAuthSession(@Auth() auth: AuthDto): Promise<void> {
     return this.service.lockSession(auth);
+  }
+
+  @Post('totp/setup')
+  @Authenticated()
+  @HttpCode(HttpStatus.OK)
+  @Endpoint({
+    summary: 'Setup TOTP',
+    description: 'Generate a new TOTP secret and QR code for two-factor authentication setup.',
+    history: new HistoryBuilder().added('v1'),
+  })
+  async setupTotp(@Auth() auth: AuthDto): Promise<TotpSetupResponseDto> {
+    return this.totpService.setupTotp(auth.user.id, auth.user.email);
+  }
+
+  @Post('totp/verify')
+  @Authenticated()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Endpoint({
+    summary: 'Verify and enable TOTP',
+    description: 'Verify the TOTP code and enable two-factor authentication for the current user.',
+    history: new HistoryBuilder().added('v1'),
+  })
+  async verifyTotp(@Auth() auth: AuthDto, @Body() dto: TotpVerifyDto): Promise<void> {
+    await this.totpService.verifyAndEnableTotp(auth.user.id, dto.code);
+    // Mark device as verified for future logins
+    if (auth.session) {
+      await this.totpService.markDeviceVerified(auth.session.id);
+    }
+  }
+
+  @Delete('totp')
+  @Authenticated()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Endpoint({
+    summary: 'Disable TOTP',
+    description: 'Disable two-factor authentication for the current user.',
+    history: new HistoryBuilder().added('v1'),
+  })
+  async disableTotp(@Auth() auth: AuthDto): Promise<void> {
+    return this.totpService.disableTotp(auth.user.id);
+  }
+
+  @Get('totp/status')
+  @Authenticated()
+  @Endpoint({
+    summary: 'Get TOTP status',
+    description: 'Get the current TOTP status for the authenticated user.',
+    history: new HistoryBuilder().added('v1'),
+  })
+  async getTotpStatus(@Auth() auth: AuthDto): Promise<TotpStatusResponseDto> {
+    return this.totpService.getTotpStatus(auth.user.id);
   }
 }

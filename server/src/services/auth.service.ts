@@ -670,6 +670,7 @@ export class AuthService extends BaseService {
       isElevated: !!auth.session?.hasElevatedPermission,
       expiresAt: session?.expiresAt?.toISOString(),
       pinExpiresAt: session?.pinExpiresAt?.toISOString(),
+      totp: false, // Will be updated when TOTP service is integrated
     };
   }
 }

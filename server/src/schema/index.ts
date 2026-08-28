@@ -72,6 +72,8 @@ import { PersonTable } from 'src/schema/tables/person.table';
 import { PluginMethodTable } from 'src/schema/tables/plugin-method.table';
 import { PluginTable } from 'src/schema/tables/plugin.table';
 import { SessionTable } from 'src/schema/tables/session.table';
+import { TotpTable } from 'src/schema/tables/totp.table';
+import { TotpDeviceTable } from 'src/schema/tables/totp-device.table';
 import { SharedLinkAssetTable } from 'src/schema/tables/shared-link-asset.table';
 import { SharedLinkTable } from 'src/schema/tables/shared-link.table';
 import { SmartSearchTable } from 'src/schema/tables/smart-search.table';
@@ -152,6 +154,8 @@ export class ImmichDatabase {
     TagTable,
     TagAssetTable,
     TagClosureTable,
+    TotpTable,
+    TotpDeviceTable,
     UserAuditTable,
     UserMetadataTable,
     UserMetadataAuditTable,
@@ -278,6 +282,9 @@ export interface DB {
   tag: TagTable;
   tag_asset: TagAssetTable;
   tag_closure: TagClosureTable;
+
+  totp: TotpTable;
+  totp_device: TotpDeviceTable;
 
   user: UserTable;
   user_audit: UserAuditTable;
