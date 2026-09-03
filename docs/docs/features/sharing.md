@@ -30,6 +30,8 @@ You can read this guide to learn more about [partner sharing](/features/partner-
 
 You can create a public link to share a group of photos or videos, or an album, with anyone. The public link can be shared via email, social media, or any other method. There are a variety of options to customize the public link, such as setting an expiration date, password protection, and more. Public shared link is handy when you want to share a group of photos or videos with someone who doesn't have an Immich account and allow the shared user to upload their photos or videos to your account.
 
+A public share link creates a restricted, unauthenticated session: whoever opens it can only view (and, if allowed, download or upload to) the assets or album that the link was created for, not any other part of your library.
+
 The public shared link is generated with a random URL, which acts as as a secret to avoid the link being guessed by unwanted parties, for instance.
 
 ```
@@ -49,3 +51,13 @@ You can create a public share link by selecting the photos or videos, or from th
 You can customize the public share link by setting an expiration date, password protection, allow what actions can be performed on the shared assets, and more.
 
 <img src={require('./img/public-shared-link-form.webp').default} width='33%' title='Creating public shared link from album' />
+
+### Using an alternative (custom) URL
+
+Instead of the long, randomly generated URL, you can give an album (or individual asset) share link a custom, memorable "slug" in the **Custom URL** field of the share dialog. Once set, the link becomes:
+
+```
+https://my.immich.app/s/<your-custom-slug>
+```
+
+This alternative URL points to the exact same restricted session as the original link — visitors are still limited to viewing the assets from the album (or the selection) the link was created for — but it is easier to type, remember, and share than the default key-based URL. The custom slug can be changed, or removed, at any time from the share link's edit page, and it must be unique across the instance.
